@@ -294,7 +294,7 @@ function clearCustomerOrderSheet() {
 
 
 function addRoomToСustomerOrderSheet() {
-    ensureCustomerOrderSheet();// Переконуємося, що лист існує
+    // ensureCustomerOrderSheet();// Переконуємося, що лист існує
     filterCustomerOrderByDropMenu1(); // Викликаємо функцію для фільтрації та копіювання рядків в залежності від значення з випадаючого меню 1
     filterCustomerOrderByDropMenu2(); // Викликаємо функцію для фільтрації рядків в залежності від значення з випадаючого меню 2
     filterCustomerOrderByDropMenu3(); // Викликаємо функцію для фільтрації рядків в залежності від значення з випадаючого меню 3
@@ -304,7 +304,7 @@ function addRoomToСustomerOrderSheet() {
 function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template MFG");
+    var templateSheet = ss.getSheetByName("Room components database");
     var questionnaireSheet = ss.getSheetByName("Questionaire");
 
     if (!templateSheet || !questionnaireSheet) {
@@ -364,11 +364,11 @@ function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
 
 function filterCustomerOrderByDropMenu1() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Room components database");
+    var templateSheet = ss.getSheetByName("Room components database"); // Лист з шаблоном
     var resultSheet = ss.getSheetByName("Customer Order") || ss.insertSheet("Customer Order"); // Лист для копіювання
 
     if (!templateSheet) {
-        Logger.log("Помилка: Лист 'Room components database' не знайдено.");
+        Logger.log("Помилка: Лист 'Template MFG' не знайдено.");
         return;
     }
 
@@ -384,7 +384,7 @@ function filterCustomerOrderByDropMenu1() {
 
     // Отримуємо діапазон даних для перевірки (від рядка 10 і далі)
     var lastRow = templateSheet.getLastRow();
-    var range = templateSheet.getRange(0, 1, lastRow - 9, templateSheet.getLastColumn());
+    var range = templateSheet.getRange(10, 1, lastRow - 9, templateSheet.getLastColumn());//
     var values = range.getValues();
     var backgrounds = range.getBackgrounds();
 
