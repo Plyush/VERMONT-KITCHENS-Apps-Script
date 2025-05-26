@@ -8,11 +8,11 @@ function onOpen() {
     setActiveSheet(); // Встановлюємо активний лист
     updateDropdownMenu1FromQuestionnaire();
     updateDropdownMenu1_1FromQuestionnaire(); // Оновлюємо другий випадаючий список на основі першого
-    createTriggerOnEditForDropdownMenu1_1();
     updateDropdownMenu2FromQuestionnaire();
     updateDropdownMenu3FromQuestionnaire();
     updateDropdownMenu4FromQuestionnaire();
     showOpenCompleteNotification(); // Показуємо повідомлення про успішне відкриття файлу
+    createTriggerOnEditForDropdownMenu1_1(); // Створюємо тригер для оновлення другого випадаючого списку при зміні першого
 }
 
 function addMenu() {
@@ -130,9 +130,14 @@ function updateDropdownMenu1_1FromQuestionnaire() {
     var selectedValue = firstDropdownCell.getValue().toString().trim();
 
     if (selectedValue === "ALL") {
-        secondDropdownCell.setValue("ALL");
         var rule = SpreadsheetApp.newDataValidation().requireValueInList(["ALL"]).build();
         secondDropdownCell.setDataValidation(rule);
+
+        // ❗ Перевіряємо, чи значення вже "ALL", щоб не змінювати повторно
+        if (secondDropdownCell.getValue() !== "ALL") {
+            secondDropdownCell.setValue("ALL");
+        }
+
         Logger.log("Другий список встановлено як 'ALL'.");
         return;
     }
@@ -158,7 +163,11 @@ function updateDropdownMenu1_1FromQuestionnaire() {
 
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
     secondDropdownCell.setDataValidation(rule);
-    secondDropdownCell.setValue("ALL"); // Встановлюємо "ALL" як значення за замовчуванням
+
+    // ❗ Перевіряємо, чи користувач **вже** змінив значення, щоб не перезаписувати його назад
+    if (secondDropdownCell.getValue() !== "ALL") {
+        secondDropdownCell.setValue("ALL");
+    }
 
     Logger.log("Другий випадаючий список оновлено, перший пункт - 'ALL', і він встановлений як початкове значення.");
 }
@@ -191,19 +200,28 @@ function updateDropdownMenu2FromQuestionnaire() {
         return;
     }
 
-    // Отримуємо дані з комірок B4:H16
+    // Отримуємо дані з комірок B22:B27
     var dataRange = sourceSheet.getRange("B22:B27");
-    var values = dataRange.getValues().flat(); // Перетворюємо 2D масив у 1D список
+    var values = dataRange.getValues().flat();
 
     // Очищаємо пусті значення
     var filteredValues = values.filter(value => value.toString().trim() !== "");
+
+    // Додаємо "ALL" як перший елемент
+    filteredValues.unshift("ALL");
 
     // Заповнюємо випадаючий список у комірці A4
     var dropdownCell = targetSheet.getRange("A4");
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
     dropdownCell.setDataValidation(rule);
 
-    Logger.log("Випадаючий список оновлено!");
+    // Примусово застосовуємо зміни, щоб уникнути асинхронних проблем
+    SpreadsheetApp.flush();
+
+    // Встановлюємо "ALL" як початкове значення після оновлення валідації
+    dropdownCell.setValue("ALL");
+
+    Logger.log("Випадаючий список оновлено! 'ALL' додано першим пунктом і встановлено як початкове значення.");
 }
 
 // Функція для оновлення 3 випадаючого списку в комірці A6
@@ -217,19 +235,28 @@ function updateDropdownMenu3FromQuestionnaire() {
         return;
     }
 
-    // Отримуємо дані з комірок B32:E37
+    // Отримуємо дані з комірок B32:B37
     var dataRange = sourceSheet.getRange("B32:B37");
     var values = dataRange.getValues().flat(); // Перетворюємо 2D масив у 1D список
 
     // Очищаємо пусті значення
     var filteredValues = values.filter(value => value.toString().trim() !== "");
 
+    // Додаємо "ALL" як перший елемент списку
+    filteredValues.unshift("ALL");
+
     // Заповнюємо випадаючий список у комірці A6
     var dropdownCell = targetSheet.getRange("A6");
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
     dropdownCell.setDataValidation(rule);
 
-    Logger.log("Випадаючий список оновлено!");
+    // Примусово застосовуємо зміни, щоб уникнути асинхронних проблем
+    SpreadsheetApp.flush();
+
+    // Встановлюємо "ALL" як початкове значення після оновлення списку
+    dropdownCell.setValue("ALL");
+
+    Logger.log("✅ Випадаючий список оновлено! 'ALL' додано першим пунктом і встановлено як початкове значення.");
 }
 
 // Функція для оновлення 4 випадаючого списку з Questionaire на Template MFG
@@ -243,19 +270,28 @@ function updateDropdownMenu4FromQuestionnaire() {
         return;
     }
 
-    // Отримуємо дані з комірок B4:H16
+    // Отримуємо дані з комірок B40:C41
     var dataRange = sourceSheet.getRange("B40:C41");
     var values = dataRange.getValues().flat(); // Перетворюємо 2D масив у 1D список
 
     // Очищаємо пусті значення
     var filteredValues = values.filter(value => value.toString().trim() !== "");
 
-    // Заповнюємо випадаючий список у комірці A6
+    // Додаємо "ALL" як перший елемент списку
+    filteredValues.unshift("ALL");
+
+    // Заповнюємо випадаючий список у комірці A8
     var dropdownCell = targetSheet.getRange("A8");
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
     dropdownCell.setDataValidation(rule);
 
-    Logger.log("Випадаючий список оновлено!");
+    // Примусово застосовуємо зміни, щоб уникнути асинхронних проблем
+    SpreadsheetApp.flush();
+
+    // Встановлюємо "ALL" як початкове значення після оновлення списку
+    dropdownCell.setValue("ALL");
+
+    Logger.log("✅ Випадаючий список оновлено! 'ALL' додано першим пунктом і встановлено як початкове значення.");
 }
 
 
