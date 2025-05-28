@@ -5,10 +5,14 @@ var initialState = {
 
 function onOpen() {
     addMenu();
+    setActiveSheet(); // Встановлюємо активний лист
     updateDropdownMenu1FromQuestionnaire();
+    updateDropdownMenu1_1FromQuestionnaire(); // Оновлюємо другий випадаючий список на основі першого
     updateDropdownMenu2FromQuestionnaire();
     updateDropdownMenu3FromQuestionnaire();
     updateDropdownMenu4FromQuestionnaire();
+    showOpenCompleteNotification(); // Показуємо повідомлення про успішне відкриття файлу
+    createTriggerOnEditForDropdownMenu1_1(); // Створюємо тригер для оновлення другого випадаючого списку при зміні першого
 }
 
 function addMenu() {
@@ -64,108 +68,220 @@ function restoreInitialState() {
     Logger.log("Відновлено початковий стан!");
 }
 
-// Функція для оновлення 1 випадаючого списку з Questionaire на Template MFG
+function setActiveSheet() {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Template room"); // Назва листа, який потрібно активувати
+    if (sheet) {
+        sheet.activate();
+    }
+}
+
+// Функція для відкриття файлу та показу повідомлення про успішне відкриття
+function showOpenCompleteNotification() {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    ss.toast("Файл успішно відкрито! Ви можете приступати до роботи.");
+}
+
+
+
+// Функція для оновлення 1 випадаючого списку з Questionaire на Template room
 function updateDropdownMenu1FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template MFG");
+    var targetSheet = ss.getSheetByName("Template room");
+    if (!sourceSheet || !targetSheet) {
+        Logger.log("Помилка: один із листів не знайдено.");
+        return;
+    }
+
+    // Отримуємо дані з комірок B4:B16
+    var dataRange = sourceSheet.getRange("B4:B16");
+    var values = dataRange.getValues().flat(); // Перетворюємо 2D масив у 1D список
+
+    // Очищаємо пусті значення
+    var filteredValues = values.filter(value => value.toString().trim() !== "");
+
+    // Додаємо "ALL" як перший елемент
+    filteredValues.unshift("ALL");
+
+    // Заповнюємо випадаючий список у комірці A2
+    var dropdownCell = targetSheet.getRange("A2"); // Комірка, де буде випадаючий список
+    var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
+    dropdownCell.setDataValidation(rule);
+
+    // Встановлюємо "ALL" як початкове значення
+    dropdownCell.setValue("ALL");
+
+    Logger.log("Випадаючий список оновлено, перший пункт - 'ALL', і він встановлений як початкове значення!");
+}
+
+function updateDropdownMenu1_1FromQuestionnaire() {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sourceSheet = ss.getSheetByName("Questionaire");
+    var targetSheet = ss.getSheetByName("Template room");
 
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
         return;
     }
 
-    // Отримуємо дані з комірок B4:I16
-    var dataRange = sourceSheet.getRange("B4:I16");
-    var values = dataRange.getValues().flat(); // Перетворюємо 2D масив у 1D список
+    var firstDropdownCell = targetSheet.getRange("A2"); // Перше меню
+    var secondDropdownCell = targetSheet.getRange("B2"); // Друге меню
+    var selectedValue = firstDropdownCell.getValue().toString().trim();
 
-    // Очищаємо пусті значення
-    var filteredValues = values.filter(value => value.toString().trim() !== "");
+    if (selectedValue === "ALL") {
+        var rule = SpreadsheetApp.newDataValidation().requireValueInList(["ALL"]).build();
+        secondDropdownCell.setDataValidation(rule);
 
-    // Заповнюємо випадаючий список у комірці A2
-    var dropdownCell = targetSheet.getRange("A2");
+        Logger.log("Другий список оновлено для 'ALL'.");
+        return;
+    }
+
+    var dataRange = sourceSheet.getDataRange().getValues(); // Отримання всіх даних
+    var matchingRow = dataRange.find(row => row.includes(selectedValue)); // Пошук рядка з відповідним значенням
+
+    if (!matchingRow) {
+        Logger.log("Помилка: відповідний рядок не знайдено.");
+        return;
+    }
+
+    var index = matchingRow.indexOf(selectedValue);
+    var filteredValues = matchingRow.slice(index + 1).filter(value => value.toString().trim() !== "");
+
+    if (filteredValues.length === 0) {
+        Logger.log("Помилка: немає доступних значень для другого списку.");
+        return;
+    }
+
+    // Додаємо "ALL" у початок списку
+    filteredValues.unshift("ALL");
+
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
-    dropdownCell.setDataValidation(rule);
+    secondDropdownCell.setDataValidation(rule);
 
-    Logger.log("Випадаючий список оновлено!");
+    Logger.log("Другий випадаючий список оновлено, 'ALL' додано першим пунктом.");
+}
+
+function createTriggerOnEditForDropdownMenu1_1() {
+    var triggers = ScriptApp.getProjectTriggers();
+
+    // Перевіряємо, чи тригер вже існує, щоб не створювати дублікати
+    var triggerExists = triggers.some(trigger => trigger.getHandlerFunction() === "updateDropdownMenu1_1FromQuestionnaire");
+
+    if (!triggerExists) {
+        ScriptApp.newTrigger("updateDropdownMenu1_1FromQuestionnaire")
+            .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+            .onEdit()
+            .create();
+        Logger.log("Тригер на зміну першого меню створено!");
+    } else {
+        Logger.log("Тригер вже існує, повторне створення не потрібно.");
+    }
 }
 
 // Функція для оновлення 2 випадаючого списку з Questionaire на Template MFG
 function updateDropdownMenu2FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template MFG");
+    var targetSheet = ss.getSheetByName("Template room");
 
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
         return;
     }
 
-    // Отримуємо дані з комірок B4:H16
+    // Отримуємо дані з комірок B22:B27
     var dataRange = sourceSheet.getRange("B22:B27");
-    var values = dataRange.getValues().flat(); // Перетворюємо 2D масив у 1D список
+    var values = dataRange.getValues().flat();
 
     // Очищаємо пусті значення
     var filteredValues = values.filter(value => value.toString().trim() !== "");
+
+    // Додаємо "ALL" як перший елемент
+    filteredValues.unshift("ALL");
 
     // Заповнюємо випадаючий список у комірці A4
     var dropdownCell = targetSheet.getRange("A4");
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
     dropdownCell.setDataValidation(rule);
 
-    Logger.log("Випадаючий список оновлено!");
+    // Примусово застосовуємо зміни, щоб уникнути асинхронних проблем
+    SpreadsheetApp.flush();
+
+    // Встановлюємо "ALL" як початкове значення після оновлення валідації
+    dropdownCell.setValue("ALL");
+
+    Logger.log("Випадаючий список оновлено! 'ALL' додано першим пунктом і встановлено як початкове значення.");
 }
 
 // Функція для оновлення 3 випадаючого списку в комірці A6
 function updateDropdownMenu3FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template MFG");
+    var targetSheet = ss.getSheetByName("Template room");
 
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
         return;
     }
 
-    // Отримуємо дані з комірок B32:E37
+    // Отримуємо дані з комірок B32:B37
     var dataRange = sourceSheet.getRange("B32:B37");
     var values = dataRange.getValues().flat(); // Перетворюємо 2D масив у 1D список
 
     // Очищаємо пусті значення
     var filteredValues = values.filter(value => value.toString().trim() !== "");
 
+    // Додаємо "ALL" як перший елемент списку
+    filteredValues.unshift("ALL");
+
     // Заповнюємо випадаючий список у комірці A6
     var dropdownCell = targetSheet.getRange("A6");
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
     dropdownCell.setDataValidation(rule);
 
-    Logger.log("Випадаючий список оновлено!");
+    // Примусово застосовуємо зміни, щоб уникнути асинхронних проблем
+    SpreadsheetApp.flush();
+
+    // Встановлюємо "ALL" як початкове значення після оновлення списку
+    dropdownCell.setValue("ALL");
+
+    Logger.log("✅ Випадаючий список оновлено! 'ALL' додано першим пунктом і встановлено як початкове значення.");
 }
 
 // Функція для оновлення 4 випадаючого списку з Questionaire на Template MFG
 function updateDropdownMenu4FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template MFG");
+    var targetSheet = ss.getSheetByName("Template room");
 
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
         return;
     }
 
-    // Отримуємо дані з комірок B4:H16
-    var dataRange = sourceSheet.getRange("B40:C45");
+    // Отримуємо дані з комірок B40:C41
+    var dataRange = sourceSheet.getRange("B40:C41");
     var values = dataRange.getValues().flat(); // Перетворюємо 2D масив у 1D список
 
     // Очищаємо пусті значення
     var filteredValues = values.filter(value => value.toString().trim() !== "");
 
-    // Заповнюємо випадаючий список у комірці A6
+    // Додаємо "ALL" як перший елемент списку
+    filteredValues.unshift("ALL");
+
+    // Заповнюємо випадаючий список у комірці A8
     var dropdownCell = targetSheet.getRange("A8");
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
     dropdownCell.setDataValidation(rule);
 
-    Logger.log("Випадаючий список оновлено!");
+    // Примусово застосовуємо зміни, щоб уникнути асинхронних проблем
+    SpreadsheetApp.flush();
+
+    // Встановлюємо "ALL" як початкове значення після оновлення списку
+    dropdownCell.setValue("ALL");
+
+    Logger.log("✅ Випадаючий список оновлено! 'ALL' додано першим пунктом і встановлено як початкове значення.");
 }
 
 
@@ -204,7 +320,7 @@ function clearCustomerOrderSheet() {
 
 
 function addRoomToСustomerOrderSheet() {
-    ensureCustomerOrderSheet();// Переконуємося, що лист існує
+    // ensureCustomerOrderSheet();// Переконуємося, що лист існує
     filterCustomerOrderByDropMenu1(); // Викликаємо функцію для фільтрації та копіювання рядків в залежності від значення з випадаючого меню 1
     filterCustomerOrderByDropMenu2(); // Викликаємо функцію для фільтрації рядків в залежності від значення з випадаючого меню 2
     filterCustomerOrderByDropMenu3(); // Викликаємо функцію для фільтрації рядків в залежності від значення з випадаючого меню 3
@@ -212,9 +328,8 @@ function addRoomToСustomerOrderSheet() {
 }
 
 function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
-
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template MFG");
+    var templateSheet = ss.getSheetByName("Template room");
     var questionnaireSheet = ss.getSheetByName("Questionaire");
 
     if (!templateSheet || !questionnaireSheet) {
@@ -222,14 +337,26 @@ function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
         return;
     }
 
-    // 1️⃣ Отримуємо значення з випадаючого списку A2
-    var selectedValue = templateSheet.getRange("A2").getValue();
+    // Получаем значения A2 и B2
+    var valueA2 = templateSheet.getRange("A2").getValue();
+    var valueB2 = templateSheet.getRange("B2").getValue();
+
+    // Определяем selectedValue
+    var selectedValue = valueB2 === "ALL" ? valueA2 : valueB2;
+
+    // Если A2 и B2 равны "ALL", сразу возвращаем "ALL"
+    if (valueA2 === "ALL" && valueB2 === "ALL") {
+        Logger.log("✅ Обнаружено: A2 и B2 = ALL. Возвращаем ALL.");
+        return { finalResultMenu1: "ALL", allResultMenu1: "ALL" };
+    }
+
+    // Проверяем, пустое ли значение selectedValue
     if (!selectedValue) {
         Logger.log("Помилка: значення випадаючого списку порожнє.");
         return;
     }
 
-    // 2️⃣ Шукаємо це значення у B4:I16
+    // Шукаємо selectedValue у B4:I16
     var dataRange = questionnaireSheet.getRange("B4:I16");
     var values = dataRange.getValues();
     var foundRow = -1;
@@ -238,89 +365,95 @@ function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
     for (var row = 0; row < values.length; row++) {
         for (var col = 0; col < values[row].length; col++) {
             if (values[row][col] === selectedValue) {
-                foundRow = row + 4; // Додаємо зсув, бо починаємо з B4
-                foundColumn = col + 2; // Додаємо зсув, бо починаємо з B4 (B = 2)
+                foundRow = row + 4;
+                foundColumn = col + 2;
                 break;
             }
         }
         if (foundRow !== -1) break;
     }
 
+    // Если значение не найдено, ошибка
     if (foundRow === -1 || foundColumn === -1) {
         Logger.log("Помилка: значення '" + selectedValue + "' не знайдено.");
         return;
     }
 
-    // 3️⃣ Отримуємо значення з рядка 3 і відповідного стовпця
+    // Получаем значения из заголовка и столбца A
     var headerValue = questionnaireSheet.getRange(3, foundColumn).getValue();
-
-    // 4️⃣ Отримуємо значення з стовпця A знайденого рядка
     var rowValue = questionnaireSheet.getRange(foundRow, 1).getValue();
 
-    // 5️⃣ Виводимо результат у консоль
-    //Logger.log("🔹 Знайдене значення: " + selectedValue);
-    //Logger.log("📍 Адреса: " + foundRow + foundColumn);
-    //Logger.log("🛠 Значення з рядка 3, стовпця " + foundColumn + ": " + headerValue);
-    //Logger.log("💡 Значення з стовпця A, рядка " + foundRow + ": " + rowValue);
+    // Формируем окончательные значения
+    var finalResultMenu1 = valueA2 === "ALL" ? "ALL" : headerValue + rowValue;
+    var allResultMenu1 = valueA2 === "ALL" ? "ALL" : rowValue + "ALL";
 
-    var finalResultMenu1 = headerValue + rowValue;
-    //Logger.log("✅ Остаточний результат: " + finalResult);
-    var allResultMenu1 = headerValue + "ALL";
+    // Логируем результаты
+    Logger.log("✅ finalResultMenu1: " + finalResultMenu1);
+    Logger.log("✅ allResultMenu1: " + allResultMenu1);
 
-    // ✅ Повертаємо об'єкт з двома значеннями
+    // Возвращаем объект
     return { finalResultMenu1: finalResultMenu1, allResultMenu1: allResultMenu1 };
-
 }
 
 function filterCustomerOrderByDropMenu1() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template MFG");
-    var resultSheet = ss.getSheetByName("Customer Order") || ss.insertSheet("Customer Order"); // Лист для копіювання
+    var templateSheet = ss.getSheetByName("Room components database");
+    var resultSheet = ss.getSheetByName("Customer Order") || ss.insertSheet("Customer Order");
 
     if (!templateSheet) {
-        Logger.log("Помилка: Лист 'Template MFG' не знайдено.");
+        Logger.log("❌ Ошибка: Лист 'Room components database' не найден.");
         return;
     }
 
-    // Отримуємо значення з випадаючого меню
+    // Получаем значения из выпадающего меню
     var resultValues = valueOfTheFirstDropMenuFromTheQuestionaireSheet();
     if (!resultValues) {
-        Logger.log("Помилка: Не вдалося отримати значення для фільтрації.");
+        Logger.log("❌ Ошибка: Не удалось получить значение для фильтрации.");
         return;
     }
 
     var finalResultMenu1 = resultValues.finalResultMenu1;
     var allResultMenu1 = resultValues.allResultMenu1;
 
-    // Отримуємо діапазон даних для перевірки (від рядка 10 і далі)
+    // Определяем диапазон данных (начиная с первой строки)
     var lastRow = templateSheet.getLastRow();
-    var range = templateSheet.getRange(10, 1, lastRow - 9, templateSheet.getLastColumn());
+    var lastColumn = templateSheet.getLastColumn();
+    var range = templateSheet.getRange(1, 1, lastRow, lastColumn);
     var values = range.getValues();
     var backgrounds = range.getBackgrounds();
 
-    var filteredRows = [];
+    // 🔹 Если оба значения "ALL", копируем все строки и завершаем функцию
+    if (finalResultMenu1 === "ALL" && allResultMenu1 === "ALL") {
+        resultSheet.getRange(1, 1, lastRow, lastColumn).setValues(values);
+        resultSheet.getRange(1, 1, lastRow, lastColumn).setBackgrounds(backgrounds);
+        Logger.log("✅ Все строки скопированы, так как выбрано 'ALL'.");
+        return;
+    }
 
+    // Фильтрация строк
+    var filteredRows = [];
     for (var row = 0; row < values.length; row++) {
-        var cellValue = values[row][0]; // Значення у стовпці A
+        var cellValue = values[row][0]; // Значение в столбце A
 
         if (cellValue !== finalResultMenu1 && cellValue !== allResultMenu1 || backgrounds[row][0] === "#00AEEF") {
             filteredRows.push(values[row]);
         }
     }
 
+    // Копируем отфильтрованные данные на целевой лист
     if (filteredRows.length > 0) {
-        var targetRange = resultSheet.getRange(1, 1, filteredRows.length, templateSheet.getLastColumn());
+        var targetRange = resultSheet.getRange(1, 1, filteredRows.length, lastColumn);
         targetRange.setValues(filteredRows);
         targetRange.setBackgrounds(backgrounds);
-        Logger.log("✅ Фільтровані рядки успішно скопійовані!");
+        Logger.log("✅ Фильтрованные строки успешно скопированы!");
     } else {
-        Logger.log("⚠️ Жоден рядок не відповідає критеріям.");
+        Logger.log("⚠️ Нет строк, удовлетворяющих критериям.");
     }
 }
 
 function filterCustomerOrderByDropMenu2() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template MFG");
+    var templateSheet = ss.getSheetByName("Template room");
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
@@ -328,9 +461,16 @@ function filterCustomerOrderByDropMenu2() {
         return;
     }
 
-    var filterValue = templateSheet.getRange("A4").getValue(); // Значення для перевірки
-    var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
+    // Получаем значение из выпадающего меню A4
+    var filterValue = templateSheet.getRange("A4").getValue();
 
+    // 🔹 Если A4 равно "ALL", сразу завершаем выполнение
+    if (filterValue === "ALL") {
+        Logger.log("✅ A4 = ALL. Фільтрація не потрібна, завершення виконання.");
+        return;
+    }
+
+    var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
     var rangesToCheck = [
         ["1. Cabinet Construction", "2. Finish Panel and Door Material"],
         ["4. Hardware", "5. Extras + Other"]
@@ -377,7 +517,7 @@ function filterCustomerOrderByDropMenu2() {
 
 function filterCustomerOrderByDropMenu3() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template MFG");
+    var templateSheet = ss.getSheetByName("Template room");
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
@@ -385,9 +525,16 @@ function filterCustomerOrderByDropMenu3() {
         return;
     }
 
-    var filterValue = templateSheet.getRange("A6").getValue(); // Значення для перевірки
-    var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
+    // Получаем значение из выпадающего меню A6
+    var filterValue = templateSheet.getRange("A6").getValue();
 
+    // 🔹 Если A6 равно "ALL", сразу завершаем выполнение
+    if (filterValue === "ALL") {
+        Logger.log("✅ A6 = ALL. Фільтрація не потрібна, завершення виконання.");
+        return;
+    }
+
+    var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
     var rangesToCheck = [
         ["2. Finish Panel and Door Material", "3. Finishing Type"],
         ["3. Finishing Type", "4. Hardware"]
@@ -415,7 +562,7 @@ function filterCustomerOrderByDropMenu3() {
             for (var row = startRow + 1; row < endRow; row++) {
                 var cellValueC = values[row][2]; // Колонка C
 
-                // Якщо значення C НЕ дорівнює `A4` або `"ALL"`, позначаємо рядок для видалення
+                // Якщо значення C НЕ дорівнює `A6` або `"ALL"`, позначаємо рядок для видалення
                 if (cellValueC !== filterValue && cellValueC !== "ALL") {
                     rowsToDelete.push(row + 1); // Зберігаємо номер рядка для видалення
                 }
@@ -434,7 +581,7 @@ function filterCustomerOrderByDropMenu3() {
 
 function filterCustomerOrderByDropMenu4() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template MFG");
+    var templateSheet = ss.getSheetByName("Template room");
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
@@ -442,7 +589,15 @@ function filterCustomerOrderByDropMenu4() {
         return;
     }
 
-    var filterValue = templateSheet.getRange("A8").getValue(); // Значення для перевірки
+    // Получаем значение из выпадающего меню A8
+    var filterValue = templateSheet.getRange("A8").getValue();
+
+    // 🔹 Если A8 равно "ALL", сразу завершаем выполнение
+    if (filterValue === "ALL") {
+        Logger.log("✅ A8 = ALL. Фільтрація не потрібна, завершення виконання.");
+        return;
+    }
+
     var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
 
     var startRow = null;
