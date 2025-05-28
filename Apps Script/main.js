@@ -133,12 +133,7 @@ function updateDropdownMenu1_1FromQuestionnaire() {
         var rule = SpreadsheetApp.newDataValidation().requireValueInList(["ALL"]).build();
         secondDropdownCell.setDataValidation(rule);
 
-        // ❗ Перевіряємо, чи значення вже "ALL", щоб не змінювати повторно
-        if (secondDropdownCell.getValue() !== "ALL") {
-            secondDropdownCell.setValue("ALL");
-        }
-
-        Logger.log("Другий список встановлено як 'ALL'.");
+        Logger.log("Другий список оновлено для 'ALL'.");
         return;
     }
 
@@ -164,12 +159,7 @@ function updateDropdownMenu1_1FromQuestionnaire() {
     var rule = SpreadsheetApp.newDataValidation().requireValueInList(filteredValues).build();
     secondDropdownCell.setDataValidation(rule);
 
-    // ❗ Перевіряємо, чи користувач **вже** змінив значення, щоб не перезаписувати його назад
-    if (secondDropdownCell.getValue() !== "ALL") {
-        secondDropdownCell.setValue("ALL");
-    }
-
-    Logger.log("Другий випадаючий список оновлено, перший пункт - 'ALL', і він встановлений як початкове значення.");
+    Logger.log("Другий випадаючий список оновлено, 'ALL' додано першим пунктом.");
 }
 
 function createTriggerOnEditForDropdownMenu1_1() {
