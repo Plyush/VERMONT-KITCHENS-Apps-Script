@@ -328,7 +328,6 @@ function addRoomToСustomerOrderSheet() {
 }
 
 function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
-
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var templateSheet = ss.getSheetByName("Template room");
     var questionnaireSheet = ss.getSheetByName("Questionaire");
@@ -338,14 +337,26 @@ function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
         return;
     }
 
-    // 1️⃣ Отримуємо значення з випадаючого списку A2
-    var selectedValue = templateSheet.getRange("A2").getValue();
+    // Получаем значения A2 и B2
+    var valueA2 = templateSheet.getRange("A2").getValue();
+    var valueB2 = templateSheet.getRange("B2").getValue();
+
+    // Определяем selectedValue
+    var selectedValue = valueB2 === "ALL" ? valueA2 : valueB2;
+
+    // Если A2 и B2 равны "ALL", сразу возвращаем "ALL"
+    if (valueA2 === "ALL" && valueB2 === "ALL") {
+        Logger.log("✅ Обнаружено: A2 и B2 = ALL. Возвращаем ALL.");
+        return { finalResultMenu1: "ALL", allResultMenu1: "ALL" };
+    }
+
+    // Проверяем, пустое ли значение selectedValue
     if (!selectedValue) {
         Logger.log("Помилка: значення випадаючого списку порожнє.");
         return;
     }
 
-    // 2️⃣ Шукаємо це значення у B4:I16
+    // Шукаємо selectedValue у B4:I16
     var dataRange = questionnaireSheet.getRange("B4:I16");
     var values = dataRange.getValues();
     var foundRow = -1;
@@ -354,38 +365,34 @@ function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
     for (var row = 0; row < values.length; row++) {
         for (var col = 0; col < values[row].length; col++) {
             if (values[row][col] === selectedValue) {
-                foundRow = row + 4; // Додаємо зсув, бо починаємо з B4
-                foundColumn = col + 2; // Додаємо зсув, бо починаємо з B4 (B = 2)
+                foundRow = row + 4;
+                foundColumn = col + 2;
                 break;
             }
         }
         if (foundRow !== -1) break;
     }
 
+    // Если значение не найдено, ошибка
     if (foundRow === -1 || foundColumn === -1) {
         Logger.log("Помилка: значення '" + selectedValue + "' не знайдено.");
         return;
     }
 
-    // 3️⃣ Отримуємо значення з рядка 3 і відповідного стовпця
+    // Получаем значения из заголовка и столбца A
     var headerValue = questionnaireSheet.getRange(3, foundColumn).getValue();
-
-    // 4️⃣ Отримуємо значення з стовпця A знайденого рядка
     var rowValue = questionnaireSheet.getRange(foundRow, 1).getValue();
 
-    // 5️⃣ Виводимо результат у консоль
-    //Logger.log("🔹 Знайдене значення: " + selectedValue);
-    //Logger.log("📍 Адреса: " + foundRow + foundColumn);
-    //Logger.log("🛠 Значення з рядка 3, стовпця " + foundColumn + ": " + headerValue);
-    //Logger.log("💡 Значення з стовпця A, рядка " + foundRow + ": " + rowValue);
+    // Формируем окончательные значения
+    var finalResultMenu1 = valueA2 === "ALL" ? "ALL" : headerValue + rowValue;
+    var allResultMenu1 = valueA2 === "ALL" ? "ALL" : rowValue + "ALL";
 
-    var finalResultMenu1 = headerValue + rowValue;
-    //Logger.log("✅ Остаточний результат: " + finalResult);
-    var allResultMenu1 = headerValue + "ALL";
+    // Логируем результаты
+    Logger.log("✅ finalResultMenu1: " + finalResultMenu1);
+    Logger.log("✅ allResultMenu1: " + allResultMenu1);
 
-    // ✅ Повертаємо об'єкт з двома значеннями
+    // Возвращаем объект
     return { finalResultMenu1: finalResultMenu1, allResultMenu1: allResultMenu1 };
-
 }
 
 function filterCustomerOrderByDropMenu1() {
@@ -415,8 +422,16 @@ function filterCustomerOrderByDropMenu1() {
     var values = range.getValues();
     var backgrounds = range.getBackgrounds();
 
-    var filteredRows = [];
+    // 🔹 Если оба значения "ALL", копируем все строки и завершаем функцию
+    if (finalResultMenu1 === "ALL" && allResultMenu1 === "ALL") {
+        resultSheet.getRange(1, 1, lastRow, lastColumn).setValues(values);
+        resultSheet.getRange(1, 1, lastRow, lastColumn).setBackgrounds(backgrounds);
+        Logger.log("✅ Все строки скопированы, так как выбрано 'ALL'.");
+        return;
+    }
 
+    // Фильтрация строк
+    var filteredRows = [];
     for (var row = 0; row < values.length; row++) {
         var cellValue = values[row][0]; // Значение в столбце A
 
@@ -446,9 +461,16 @@ function filterCustomerOrderByDropMenu2() {
         return;
     }
 
-    var filterValue = templateSheet.getRange("A4").getValue(); // Значення для перевірки
-    var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
+    // Получаем значение из выпадающего меню A4
+    var filterValue = templateSheet.getRange("A4").getValue();
 
+    // 🔹 Если A4 равно "ALL", сразу завершаем выполнение
+    if (filterValue === "ALL") {
+        Logger.log("✅ A4 = ALL. Фільтрація не потрібна, завершення виконання.");
+        return;
+    }
+
+    var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
     var rangesToCheck = [
         ["1. Cabinet Construction", "2. Finish Panel and Door Material"],
         ["4. Hardware", "5. Extras + Other"]
@@ -503,9 +525,16 @@ function filterCustomerOrderByDropMenu3() {
         return;
     }
 
-    var filterValue = templateSheet.getRange("A6").getValue(); // Значення для перевірки
-    var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
+    // Получаем значение из выпадающего меню A6
+    var filterValue = templateSheet.getRange("A6").getValue();
 
+    // 🔹 Если A6 равно "ALL", сразу завершаем выполнение
+    if (filterValue === "ALL") {
+        Logger.log("✅ A6 = ALL. Фільтрація не потрібна, завершення виконання.");
+        return;
+    }
+
+    var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
     var rangesToCheck = [
         ["2. Finish Panel and Door Material", "3. Finishing Type"],
         ["3. Finishing Type", "4. Hardware"]
@@ -533,7 +562,7 @@ function filterCustomerOrderByDropMenu3() {
             for (var row = startRow + 1; row < endRow; row++) {
                 var cellValueC = values[row][2]; // Колонка C
 
-                // Якщо значення C НЕ дорівнює `A4` або `"ALL"`, позначаємо рядок для видалення
+                // Якщо значення C НЕ дорівнює `A6` або `"ALL"`, позначаємо рядок для видалення
                 if (cellValueC !== filterValue && cellValueC !== "ALL") {
                     rowsToDelete.push(row + 1); // Зберігаємо номер рядка для видалення
                 }
@@ -560,7 +589,15 @@ function filterCustomerOrderByDropMenu4() {
         return;
     }
 
-    var filterValue = templateSheet.getRange("A8").getValue(); // Значення для перевірки
+    // Получаем значение из выпадающего меню A8
+    var filterValue = templateSheet.getRange("A8").getValue();
+
+    // 🔹 Если A8 равно "ALL", сразу завершаем выполнение
+    if (filterValue === "ALL") {
+        Logger.log("✅ A8 = ALL. Фільтрація не потрібна, завершення виконання.");
+        return;
+    }
+
     var values = resultSheet.getDataRange().getValues(); // Отримуємо всі дані з аркуша
 
     var startRow = null;
