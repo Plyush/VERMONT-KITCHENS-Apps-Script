@@ -1,7 +1,1 @@
-main.js
-main*.js
-main" copy 2".js
-main" copy 3.c".js
-main" copy 3".js
-main"copy 4 (filtering is complete)".js
-"main copy 5 (вірно працює але без ALL)".js
+main\
