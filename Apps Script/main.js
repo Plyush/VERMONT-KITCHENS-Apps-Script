@@ -330,7 +330,7 @@ function addRoomToСustomerOrderSheet() {
 function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Room components database");
+    var templateSheet = ss.getSheetByName("Template room");
     var questionnaireSheet = ss.getSheetByName("Questionaire");
 
     if (!templateSheet || !questionnaireSheet) {
@@ -390,53 +390,55 @@ function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
 
 function filterCustomerOrderByDropMenu1() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Room components database"); // Лист з шаблоном
-    var resultSheet = ss.getSheetByName("Customer Order") || ss.insertSheet("Customer Order"); // Лист для копіювання
+    var templateSheet = ss.getSheetByName("Room components database");
+    var resultSheet = ss.getSheetByName("Customer Order") || ss.insertSheet("Customer Order");
 
     if (!templateSheet) {
-        Logger.log("Помилка: Лист 'Template MFG' не знайдено.");
+        Logger.log("❌ Ошибка: Лист 'Room components database' не найден.");
         return;
     }
 
-    // Отримуємо значення з випадаючого меню
+    // Получаем значения из выпадающего меню
     var resultValues = valueOfTheFirstDropMenuFromTheQuestionaireSheet();
     if (!resultValues) {
-        Logger.log("Помилка: Не вдалося отримати значення для фільтрації.");
+        Logger.log("❌ Ошибка: Не удалось получить значение для фильтрации.");
         return;
     }
 
     var finalResultMenu1 = resultValues.finalResultMenu1;
     var allResultMenu1 = resultValues.allResultMenu1;
 
-    // Отримуємо діапазон даних для перевірки (від рядка 10 і далі)
+    // Определяем диапазон данных (начиная с первой строки)
     var lastRow = templateSheet.getLastRow();
-    var range = templateSheet.getRange(10, 1, lastRow - 9, templateSheet.getLastColumn());//
+    var lastColumn = templateSheet.getLastColumn();
+    var range = templateSheet.getRange(1, 1, lastRow, lastColumn);
     var values = range.getValues();
     var backgrounds = range.getBackgrounds();
 
     var filteredRows = [];
 
     for (var row = 0; row < values.length; row++) {
-        var cellValue = values[row][0]; // Значення у стовпці A
+        var cellValue = values[row][0]; // Значение в столбце A
 
         if (cellValue !== finalResultMenu1 && cellValue !== allResultMenu1 || backgrounds[row][0] === "#00AEEF") {
             filteredRows.push(values[row]);
         }
     }
 
+    // Копируем отфильтрованные данные на целевой лист
     if (filteredRows.length > 0) {
-        var targetRange = resultSheet.getRange(1, 1, filteredRows.length, templateSheet.getLastColumn());
+        var targetRange = resultSheet.getRange(1, 1, filteredRows.length, lastColumn);
         targetRange.setValues(filteredRows);
         targetRange.setBackgrounds(backgrounds);
-        Logger.log("✅ Фільтровані рядки успішно скопійовані!");
+        Logger.log("✅ Фильтрованные строки успешно скопированы!");
     } else {
-        Logger.log("⚠️ Жоден рядок не відповідає критеріям.");
+        Logger.log("⚠️ Нет строк, удовлетворяющих критериям.");
     }
 }
 
 function filterCustomerOrderByDropMenu2() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Room components database");
+    var templateSheet = ss.getSheetByName("Template room");
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
@@ -493,7 +495,7 @@ function filterCustomerOrderByDropMenu2() {
 
 function filterCustomerOrderByDropMenu3() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Room components database");
+    var templateSheet = ss.getSheetByName("Template room");
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
@@ -550,7 +552,7 @@ function filterCustomerOrderByDropMenu3() {
 
 function filterCustomerOrderByDropMenu4() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Room components database");
+    var templateSheet = ss.getSheetByName("Template room");
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
