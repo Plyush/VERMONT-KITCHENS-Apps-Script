@@ -18,6 +18,7 @@ function addMenu() {
         .addItem('Restore Initial State', 'restoreInitialState') // Додати пункт меню для відновлення початкового стану
         .addToUi();
 }
+
 function saveInitialState() {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     var sheets = spreadsheet.getSheets();
@@ -274,7 +275,7 @@ function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
 
 function filterCustomerOrderByDropMenu1() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template MFG");
+    var templateSheet = ss.getSheetByName("Template MFG"); // Лист з шаблоном
     var resultSheet = ss.getSheetByName("Customer Order") || ss.insertSheet("Customer Order"); // Лист для копіювання
 
     if (!templateSheet) {
@@ -294,7 +295,7 @@ function filterCustomerOrderByDropMenu1() {
 
     // Отримуємо діапазон даних для перевірки (від рядка 10 і далі)
     var lastRow = templateSheet.getLastRow();
-    var range = templateSheet.getRange(10, 1, lastRow - 9, templateSheet.getLastColumn());
+    var range = templateSheet.getRange(10, 1, lastRow - 9, templateSheet.getLastColumn());//
     var values = range.getValues();
     var backgrounds = range.getBackgrounds();
 
