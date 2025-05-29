@@ -68,6 +68,12 @@ function restoreInitialState() {
     Logger.log("Відновлено початковий стан!");
 }
 
+// Функція отримання назви активного листа
+function getActiveSheetName() {
+    return SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getName();
+}
+
+// Функція для встановлення активного листа "Template room"
 function setActiveSheet() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName("Template room"); // Назва листа, який потрібно активувати
