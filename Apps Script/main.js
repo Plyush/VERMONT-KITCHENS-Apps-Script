@@ -80,7 +80,7 @@ function setActiveSheet() {
     if (sheet) {
         sheet.activate();
     }
-}
+}//TODO: Я незнаю який лист потрібно активовути
 
 // Функція для відкриття файлу та показу повідомлення про успішне відкриття
 function showOpenCompleteNotification() {
@@ -94,7 +94,7 @@ function showOpenCompleteNotification() {
 function updateDropdownMenu1FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template room");
+    var targetSheet = ss.getSheetByName(getActiveSheetName());//CHANGED:"Template room" on getActiveSheetName()
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
         return;
@@ -124,7 +124,7 @@ function updateDropdownMenu1FromQuestionnaire() {
 function updateDropdownMenu1_1FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template room");
+    var targetSheet = ss.getSheetByName(getActiveSheetName()); //CHANGED:"Template room" on getActiveSheetName()
 
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
@@ -189,7 +189,7 @@ function createTriggerOnEditForDropdownMenu1_1() {
 function updateDropdownMenu2FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template room");
+    var targetSheet = ss.getSheetByName(getActiveSheetName()); //CHANGED:"Template room" on getActiveSheetName()
 
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
@@ -224,7 +224,7 @@ function updateDropdownMenu2FromQuestionnaire() {
 function updateDropdownMenu3FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template room");
+    var targetSheet = ss.getSheetByName(getActiveSheetName()); //CHANGED:"Template room" on getActiveSheetName()
 
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
@@ -259,7 +259,7 @@ function updateDropdownMenu3FromQuestionnaire() {
 function updateDropdownMenu4FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
-    var targetSheet = ss.getSheetByName("Template room");
+    var targetSheet = ss.getSheetByName(getActiveSheetName()); //CHANGED:"Template room" on getActiveSheetName()
 
     if (!sourceSheet || !targetSheet) {
         Logger.log("Помилка: один із листів не знайдено.");
@@ -335,7 +335,7 @@ function addRoomToСustomerOrderSheet() {
 
 function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template room");
+    var templateSheet = ss.getSheetByName(getActiveSheetName()); //CHANGED:"Template room" on getActiveSheetName()
     var questionnaireSheet = ss.getSheetByName("Questionaire");
 
     if (!templateSheet || !questionnaireSheet) {
@@ -459,7 +459,7 @@ function filterCustomerOrderByDropMenu1() {
 
 function filterCustomerOrderByDropMenu2() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template room");
+    var templateSheet = ss.getSheetByName("getActiveSheetName()"); //CHANGED:"Template room" on getActiveSheetName()
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
@@ -524,7 +524,7 @@ function filterCustomerOrderByDropMenu2() {
 
 function filterCustomerOrderByDropMenu3() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template room");
+    var templateSheet = ss.getSheetByName(getActiveSheetName()); //CHANGED:"Template room" on getActiveSheetName()
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
@@ -588,7 +588,7 @@ function filterCustomerOrderByDropMenu3() {
 
 function filterCustomerOrderByDropMenu4() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName("Template room");
+    var templateSheet = ss.getSheetByName(getActiveSheetName()); //CHANGED:"Template room" on getActiveSheetName()
     var resultSheet = ss.getSheetByName("Customer Order");
 
     if (!templateSheet || !resultSheet) {
