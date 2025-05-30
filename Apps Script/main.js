@@ -266,39 +266,59 @@ function addRoomToСustomerOrderSheet() {
 
 function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var templateSheet = ss.getSheetByName(getActiveSheetName());
+    // ИСПОЛЬЗУЕМ АКТИВНЫЙ ЛИСТ для чтения A2/B2 и для переименования
+    var activeSheet = ss.getActiveSheet();
     var questionnaireSheet = ss.getSheetByName("Questionaire");
+    // var ui = SpreadsheetApp.getUi(); // Раскомментируйте, если нужны ui.alert для ошибок переименования
 
-    if (!templateSheet) {
-        Logger.log("Помилка valueOfTheFirstDropMenu: Лист для значень A2/B2 (активний: " + getActiveSheetName() + ") не знайдено або не є 'Template room'.");
-        return;
-    }
+    // activeSheet почти всегда будет существовать, если скрипт запущен из таблицы.
+    // Поэтому явная проверка if (!activeSheet) здесь менее критична, чем для именованных листов.
     if (!questionnaireSheet) {
         Logger.log("Помилка valueOfTheFirstDropMenu: Лист 'Questionaire' не знайдено.");
-        return;
+        return { finalResultMenu1: "ERROR_QUESTIONNAIRE_NOT_FOUND", allResultMenu1: "ERROR_QUESTIONNAIRE_NOT_FOUND" };
     }
 
-    var valueA2 = templateSheet.getRange("A2").getValue();
-    var valueB2 = templateSheet.getRange("B2").getValue();
-    var selectedValue = (valueB2 === "ALL" || valueB2 === "") ? valueA2 : valueB2;
+    // Читаем значения A2 и B2 с АКТИВНОГО листа
+    var valueA2 = activeSheet.getRange("A2").getValue();
+    var valueB2 = activeSheet.getRange("B2").getValue();
+
+    // Это значение используется для поиска в 'Questionaire' и для формирования имени листа (если не "ALL")
+    var derivedSelectedValue = (valueB2 === "ALL" || valueB2 === "") ? valueA2 : valueB2;
+    var newSheetName = ""; // Будущее имя для активного листа
 
     if (valueA2 === "ALL" && (valueB2 === "ALL" || valueB2 === "")) {
-        Logger.log("✅ valueOfTheFirstDropMenu: A2 и B2 = ALL. Возвращаем ALL.");
+        Logger.log("✅ valueOfTheFirstDropMenu: A2 и B2 на активном листе ('" + activeSheet.getName() + "') = ALL.");
+        newSheetName = "ALL rooms"; // Формируем новое имя листа
+
+        try {
+            var oldName = activeSheet.getName();
+            if (oldName !== newSheetName) {
+                activeSheet.setName(newSheetName);
+                SpreadsheetApp.flush(); // Применяем изменения немедленно
+                Logger.log("✅ Активний лист '" + oldName + "' перейменовано на: " + newSheetName);
+            } else {
+                Logger.log("✅ Активний лист вже має назву: '" + newSheetName + "'. Перейменування не потрібне.");
+            }
+        } catch (e) {
+            Logger.log('Помилка перейменування активного листа (' + activeSheet.getName() + ') на "' + newSheetName + '": ' + e.message);
+            // ui.alert('Помилка перейменування', 'Не вдалося перейменувати активний лист на "' + newSheetName + '".\nПомилка: ' + e.message, ui.ButtonSet.OK);
+        }
         return { finalResultMenu1: "ALL", allResultMenu1: "ALL" };
     }
 
-    if (!selectedValue || selectedValue.toString().trim() === "") {
-        Logger.log("Помилка valueOfTheFirstDropMenu: значення випадаючого списку (A2/B2) порожнє.");
+    if (!derivedSelectedValue || derivedSelectedValue.toString().trim() === "") {
+        Logger.log("Помилка valueOfTheFirstDropMenu: значення випадаючого списку (A2/B2) на активному листі ('" + activeSheet.getName() + "') порожнє. Активний лист не перейменовано.");
         return { finalResultMenu1: "ERROR_NO_SELECTION", allResultMenu1: "ERROR_NO_SELECTION" };
     }
 
+    // Логика поиска для finalResultMenu1 и allResultMenu1
     var dataRangeValues = questionnaireSheet.getRange("B4:I16").getValues();
     var foundRowInSpreadsheet = -1;
     var foundColInSpreadsheet = -1;
 
     for (var r = 0; r < dataRangeValues.length; r++) {
         for (var c = 0; c < dataRangeValues[r].length; c++) {
-            if (dataRangeValues[r][c] === selectedValue) {
+            if (dataRangeValues[r][c].toString().trim() === derivedSelectedValue.toString().trim()) {
                 foundRowInSpreadsheet = r + 4;
                 foundColInSpreadsheet = c + 2;
                 break;
@@ -308,15 +328,31 @@ function valueOfTheFirstDropMenuFromTheQuestionaireSheet() {
     }
 
     if (foundRowInSpreadsheet === -1 || foundColInSpreadsheet === -1) {
-        Logger.log("Помилка valueOfTheFirstDropMenu: значення '" + selectedValue + "' не знайдено в діапазоні B4:I16 на 'Questionaire'.");
+        Logger.log("Помилка valueOfTheFirstDropMenu: значення '" + derivedSelectedValue + "' (з активного листа '" + activeSheet.getName() + "') не знайдено в діапазоні B4:I16 на 'Questionaire'. Активний лист не перейменовано.");
         return { finalResultMenu1: "ERROR_NOT_FOUND", allResultMenu1: "ERROR_NOT_FOUND" };
     }
 
     var headerValue = questionnaireSheet.getRange(3, foundColInSpreadsheet).getValue();
     var rowValue = questionnaireSheet.getRange(foundRowInSpreadsheet, 1).getValue();
 
-    var finalResultMenu1 = (valueA2 === "ALL" || valueA2 === "") ? "ALL" : headerValue + "" + rowValue;
-    var allResultMenu1 = (valueA2 === "ALL" || valueA2 === "") ? "ALL" : rowValue + "ALL";
+    var finalResultMenu1 = (valueA2 === "ALL" || valueA2 === "") ? "ALL" : headerValue.toString() + rowValue.toString();
+    var allResultMenu1 = (valueA2 === "ALL" || valueA2 === "") ? "ALL" : rowValue.toString() + "ALL";
+
+    // Логика переименования для случая, когда выбрано не "ALL"
+    newSheetName = derivedSelectedValue.toString().trim() + " room"; // Формируем новое имя листа
+    try {
+        var oldName = activeSheet.getName();
+        if (oldName !== newSheetName) {
+            activeSheet.setName(newSheetName);
+            SpreadsheetApp.flush();
+            Logger.log("✅ Активний лист '" + oldName + "' перейменовано на: " + newSheetName);
+        } else {
+            Logger.log("✅ Активний лист вже має назву: '" + newSheetName + "'. Перейменування не потрібне.");
+        }
+    } catch (e) {
+        Logger.log('Помилка перейменування активного листа (' + activeSheet.getName() + ') на "' + newSheetName + '": ' + e.message);
+        // ui.alert('Помилка перейменування', 'Не вдалося перейменувати активний лист на "' + newSheetName + '".\nПомилка: ' + e.message, ui.ButtonSet.OK);
+    }
 
     Logger.log("✅ valueOfTheFirstDropMenu: finalResultMenu1: " + finalResultMenu1 + ", allResultMenu1: " + allResultMenu1);
     return { finalResultMenu1: finalResultMenu1, allResultMenu1: allResultMenu1 };
