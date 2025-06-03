@@ -1,3 +1,5 @@
+var lastSheetName = "";
+
 var initialState = { // Эта переменная все еще не используется. Рассмотрите возможность ее удаления.
     sheetsData: {},
     hiddenSheets: []
@@ -5,15 +7,47 @@ var initialState = { // Эта переменная все еще не испо�
 
 function onOpen() {
     addMenu();
-    setActiveSheet(); // Встановлюємо активний лист (сейчас "Template room")
-    updateDropdownMenu1FromQuestionnaire();
-    updateDropdownMenu1_1FromQuestionnaire();
-    updateDropdownMenu2FromQuestionnaire();
-    updateDropdownMenu3FromQuestionnaire();
-    updateDropdownMenu4FromQuestionnaire();
+    setFirstValidSheetActive(); // Устанавливаем первый валидный лист активным
+    //updateDropdownMenu1FromQuestionnaire();
+    //updateDropdownMenu1_1FromQuestionnaire();
+    //updateDropdownMenu2FromQuestionnaire();
+    //updateDropdownMenu3FromQuestionnaire();
+    //updateDropdownMenu4FromQuestionnaire();
+
     showOpenCompleteNotification();
     createTriggerOnEditForDropdownMenu1_1();
 }
+
+function onSelectionChange(e) {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var sheetName = sheet.getName();
+
+    var excludedSheets = ["Questionaire", "Room components database"];
+
+    if (sheetName !== lastSheetName && !excludedSheets.includes(sheetName)) {
+        lastSheetName = sheetName;
+        updateDropdownMenu2FromQuestionnaire();
+    }
+}
+
+
+
+
+function createTriggerOnEditForDropdownMenu1_1() {
+    var triggers = ScriptApp.getProjectTriggers();
+    var triggerExists = triggers.some(trigger => trigger.getHandlerFunction() === "updateDropdownMenu1_1FromQuestionnaire");
+
+    if (!triggerExists) {
+        ScriptApp.newTrigger("updateDropdownMenu1_1FromQuestionnaire")
+            .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+            .onEdit()
+            .create();
+        Logger.log("Тригер 'updateDropdownMenu1_1FromQuestionnaire' на onEdit створено!");
+    } else {
+        Logger.log("Тригер 'updateDropdownMenu1_1FromQuestionnaire' вже існує.");
+    }
+}
+
 
 function addMenu() {
     var ui = SpreadsheetApp.getUi();
@@ -72,16 +106,26 @@ function getActiveSheetName() {
     return SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getName();
 }
 
-function setActiveSheet() {
+
+
+
+
+
+function setFirstValidSheetActive() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheetName = "Template room";
-    // TODO: Я незнаю який лист потрібно активовути (Убедитесь, что "Template room" - это правильный лист)
-    var sheet = ss.getSheetByName(sheetName);
-    if (sheet) {
-        sheet.activate();
-    } else {
-        Logger.log("Помилка в setActiveSheet: Лист '" + sheetName + "' не знайдено.");
+    var sheets = ss.getSheets();
+
+    for (var i = 0; i < sheets.length; i++) {
+        var sheetName = sheets[i].getName();
+
+        if (sheetName !== "Room components database" && sheetName !== "Questionaire") {
+            ss.setActiveSheet(sheets[i]);
+            Logger.log("Активний лист: " + sheetName);
+            return; // Виходимо після встановлення активного листа
+        }
     }
+
+    Logger.log("Не знайдено листа, що відповідає умовам.");
 }
 
 function showOpenCompleteNotification() {
@@ -163,38 +207,48 @@ function updateDropdownMenu1_1FromQuestionnaire() {
     Logger.log("Другий випадаючий список (B2) оновлено на листі '" + targetSheet.getName() + "'.");
 }
 
-function createTriggerOnEditForDropdownMenu1_1() {
-    var triggers = ScriptApp.getProjectTriggers();
-    var triggerExists = triggers.some(trigger => trigger.getHandlerFunction() === "updateDropdownMenu1_1FromQuestionnaire");
-
-    if (!triggerExists) {
-        ScriptApp.newTrigger("updateDropdownMenu1_1FromQuestionnaire")
-            .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
-            .onEdit()
-            .create();
-        Logger.log("Тригер 'updateDropdownMenu1_1FromQuestionnaire' на onEdit створено!");
-    } else {
-        Logger.log("Тригер 'updateDropdownMenu1_1FromQuestionnaire' вже існує.");
-    }
-}
-
 function updateDropdownMenu2FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
     var targetSheet = ss.getSheetByName(getActiveSheetName());
+
     if (!sourceSheet || !targetSheet) {
-        Logger.log("Помилка updateDropdownMenu2: один із листів не знайдено.");
+        Logger.log("Помилка updateDropdownMenus: один із листів не знайдено.");
         return;
     }
+
     var dataRange = sourceSheet.getRange("B22:B27");
     var values = dataRange.getValues().flat().filter(value => value.toString().trim() !== "");
     values.unshift("ALL");
-    var dropdownCell = targetSheet.getRange("A4");
-    var rule = SpreadsheetApp.newDataValidation().requireValueInList(values).build();
-    dropdownCell.setDataValidation(rule);
-    SpreadsheetApp.flush();
-    dropdownCell.setValue("ALL");
-    Logger.log("Випадаючий список 2 (A4) оновлено на листі '" + targetSheet.getName() + "'.");
+
+    var sheetData = targetSheet.getDataRange().getValues();
+    var startRow = null;
+    var endRow = null;
+
+    // Знаходимо рядки меж маркерів
+    for (var r = 0; r < sheetData.length; r++) {
+        var cellValue = sheetData[r][0]; // Перевіряємо значення у першому стовпці
+        if (cellValue === "1. Cabinet Construction & 4. Hardware") {
+            startRow = r + 1; // Починаємо після знайденого рядка
+        } else if (cellValue === "2. Finish Panel and Door Materialc & 3. Finishing type") {
+            endRow = r;
+            break; // Зупиняємо пошук після знаходження другого маркера
+        }
+    }
+
+    if (startRow !== null && endRow !== null) {
+        // Оновлюємо всі випадаючі списки між межами
+        for (var row = startRow; row < endRow; row++) {
+            var dropdownCell = targetSheet.getRange(row + 1, 1); // Колонка A
+            var rule = SpreadsheetApp.newDataValidation().requireValueInList(values).build();
+            dropdownCell.setDataValidation(rule);
+            dropdownCell.setValue("ALL");
+        }
+        SpreadsheetApp.flush();
+        Logger.log("Випадаючі списки оновлено на листі '" + targetSheet.getName() + "' в рядках " + startRow + " - " + endRow);
+    } else {
+        Logger.log("Не вдалося знайти обидва маркерні рядки.");
+    }
 }
 
 function updateDropdownMenu3FromQuestionnaire() {
@@ -564,7 +618,7 @@ function filterCustomerOrderByDropMenu4() {
     }
 
     if (startRowDataIdx === -1 || endRowDataIdx === -1 || startRowDataIdx >= endRowDataIdx) {
-        Logger.log("⚠️ filterCustomerOrderByDropMenu4: Не удалось найти межі ('5. Extras + Other', '6. Overhead + Assembly') в колонці D на активном листе '" + activeSheet.getName() + "'.");
+        Logger.log("⚠️ filterCustomerOrderByDropMenu4: Не вдалося знайти межі ('5. Extras + Other', '6. Overhead + Assembly') в колонці D на активном листе '" + activeSheet.getName() + "'.");
         return;
     }
 
@@ -586,7 +640,7 @@ function filterCustomerOrderByDropMenu4() {
 
 /**
  * Вставляет пустую строку перед строками, содержащими определенные значения в первом столбце.
- * Значения для поиска: "2. Finish Panel and Door Materialc" и "3. Finishing type".
+ * Значения для поиска: "2. Finish Panel and Door Materialc & 3. Finishing type".
  */
 function insertRowBeforeSpecificValues() {
     // Получаем активную таблицу Google
@@ -618,8 +672,11 @@ function insertRowBeforeSpecificValues() {
 
 
 /**
- * Видаляє рядок перед рядком, що містить значення triggerText,
- * за винятком випадку, коли рядок ПЕРЕД тим, що підлягає видаленню, містить stopMarkerText.
+ * Видаляє рядок перед рядком, що містить значення triggerText = "2. Finish Panel and Door Materialc & 3. Finishing type",
+ * за винятком випадку, коли рядок ПЕРЕД тим, що підлягає видаленню, містить stopMarkerText = "1. Cabinet Construction & 4. Hardware".
+ * Тобто, якщо рядок перед рядком-кандидатом на видалення містить stopMarkerText,
+ * то рядок-кандидат на видалення НЕ буде видалено.
+ * і надішле повідомлення про причину, чому рядок не видалено.
  */
 function deleteRowConditionallyUpdated() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -690,3 +747,9 @@ function deleteRowConditionallyUpdated() {
         SpreadsheetApp.getActiveSpreadsheet().toast("Обробка завершена. Видалено: " + rowsDeletedCount + ", Залишено: " + rowsKeptCount);
     }
 }
+
+
+
+
+
+
