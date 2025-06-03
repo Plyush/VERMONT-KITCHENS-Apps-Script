@@ -27,6 +27,7 @@ function onSelectionChange(e) {
     if (sheetName !== lastSheetName && !excludedSheets.includes(sheetName)) {
         lastSheetName = sheetName;
         updateDropdownMenu2FromQuestionnaire();
+        updateDropdownMenu3FromQuestionnaire();
     }
 }
 
@@ -105,11 +106,6 @@ function restoreInitialState() {
 function getActiveSheetName() {
     return SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getName();
 }
-
-
-
-
-
 
 function setFirstValidSheetActive() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -255,19 +251,44 @@ function updateDropdownMenu3FromQuestionnaire() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sourceSheet = ss.getSheetByName("Questionaire");
     var targetSheet = ss.getSheetByName(getActiveSheetName());
+
     if (!sourceSheet || !targetSheet) {
-        Logger.log("Помилка updateDropdownMenu3: один із листів не знайдено.");
+        Logger.log("Помилка updateDropdownMenus: один із листів не знайдено.");
         return;
     }
+
     var dataRange = sourceSheet.getRange("B32:B37");
     var values = dataRange.getValues().flat().filter(value => value.toString().trim() !== "");
     values.unshift("ALL");
-    var dropdownCell = targetSheet.getRange("A6");
-    var rule = SpreadsheetApp.newDataValidation().requireValueInList(values).build();
-    dropdownCell.setDataValidation(rule);
-    SpreadsheetApp.flush();
-    dropdownCell.setValue("ALL");
-    Logger.log("Випадаючий список 3 (A6) оновлено на листі '" + targetSheet.getName() + "'.");
+
+    var sheetData = targetSheet.getDataRange().getValues();
+    var startRow = null;
+    var endRow = null;
+
+    // Знаходимо рядки меж маркерів
+    for (var r = 0; r < sheetData.length; r++) {
+        var cellValue = sheetData[r][0]; // Перевіряємо значення у першому стовпці
+        if (cellValue === "2. Finish Panel and Door Materialc & 3. Finishing type") {
+            startRow = r + 1; // Починаємо після знайденого рядка
+        } else if (cellValue === "5. Extras and Other") {
+            endRow = r;
+            break; // Зупиняємо пошук після знаходження другого маркера
+        }
+    }
+
+    if (startRow !== null && endRow !== null) {
+        // Оновлюємо всі випадаючі списки між межами
+        for (var row = startRow; row < endRow; row++) {
+            var dropdownCell = targetSheet.getRange(row + 1, 1); // Колонка A
+            var rule = SpreadsheetApp.newDataValidation().requireValueInList(values).build();
+            dropdownCell.setDataValidation(rule);
+            dropdownCell.setValue("ALL");
+        }
+        SpreadsheetApp.flush();
+        Logger.log("Випадаючі списки оновлено на листі '" + targetSheet.getName() + "' в рядках " + startRow + " - " + endRow);
+    } else {
+        Logger.log("Не вдалося знайти обидва маркерні рядки.");
+    }
 }
 
 function updateDropdownMenu4FromQuestionnaire() {
@@ -642,7 +663,7 @@ function filterCustomerOrderByDropMenu4() {
  * Вставляет пустую строку перед строками, содержащими определенные значения в первом столбце.
  * Значения для поиска: "2. Finish Panel and Door Materialc & 3. Finishing type".
  */
-function insertRowBeforeSpecificValues() {
+function insertRowBeforeSpecificValues1() {
     // Получаем активную таблицу Google
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     // Получаем активный лист
@@ -678,7 +699,7 @@ function insertRowBeforeSpecificValues() {
  * то рядок-кандидат на видалення НЕ буде видалено.
  * і надішле повідомлення про причину, чому рядок не видалено.
  */
-function deleteRowConditionallyUpdated() {
+function deleteRowConditionallyUpdated1() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getActiveSheet();
     const dataRange = sheet.getDataRange();
@@ -748,6 +769,115 @@ function deleteRowConditionallyUpdated() {
     }
 }
 
+/**
+ * Вставляет пустую строку перед строками, содержащими определенные значения в первом столбце.
+ * Значения для поиска: "5. Extras and Other".
+ */
+function insertRowBeforeSpecificValues2() {
+    // Получаем активную таблицу Google
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    // Получаем активный лист
+    const sheet = ss.getActiveSheet();
+    // Получаем все данные с листа
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+
+    // Целевые значения для поиска в первом столбце (индекс 0)
+    const targetValue1 = "5. Extras and Other";
+
+    // Итерация по строкам с конца к началу, чтобы избежать проблем с индексацией при вставке строк
+    for (let i = values.length - 1; i >= 0; i--) {
+        // Получаем значение в первом столбце текущей строки
+        // Убедимся, что значение существует и является строкой перед вызовом trim()
+        const firstColumnValue = values[i][0] ? String(values[i][0]).trim() : "";
+
+        // Проверяем, соответствует ли значение одному из целевых
+        if (firstColumnValue === targetValue1) {
+            // Вставляем пустую строку перед текущей строкой (i + 1, так как нумерация строк в Apps Script начинается с 1)
+            sheet.insertRowBefore(i + 1);
+            Logger.log(`Вставлена строка перед строкой ${i + 2}, содержащей: "${firstColumnValue}"`); // +2 потому что мы вставили строку, и исходная строка сдвинулась
+        }
+    }
+    Logger.log("Обработка завершена.");
+}
+
+
+/**
+ * Видаляє рядок перед рядком, що містить значення triggerText = "5. Extras and Other",
+ * за винятком випадку, коли рядок ПЕРЕД тим, що підлягає видаленню, містить stopMarkerText = "2. Finish Panel and Door Materialc & 3. Finishing type".
+ * Тобто, якщо рядок перед рядком-кандидатом на видалення містить stopMarkerText,
+ * то рядок-кандидат на видалення НЕ буде видалено.
+ * і надішле повідомлення про причину, чому рядок не видалено.
+ */
+function deleteRowConditionallyUpdated2() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getActiveSheet();
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues(); // Отримуємо всі значення один раз
+    const ui = SpreadsheetApp.getUi();
+
+    // Текст, який ініціює перевірку рядка вище для видалення
+    const triggerText = "5. Extras and Other";
+    // Текст рядка-маркера, який, якщо знаходиться за один рядок ДО рядка-кандидата на видалення,
+    // запобігає видаленню.
+    const stopMarkerText = "2. Finish Panel and Door Materialc & 3. Finishing type";
+
+    let rowsDeletedCount = 0;
+    let rowsKeptCount = 0;
+
+    // Ітерація по рядках з кінця до початку, щоб уникнути проблем з індексацією при видаленні.
+    // values[i] - поточний рядок (потенційний тригер). На аркуші це рядок (i+1).
+    // values[i-1] - рядок над поточним (потенційний кандидат на видалення). На аркуші це рядок (i).
+    // values[i-2] - рядок за один до кандидата на видалення. На аркуші це рядок (i-1).
+    for (let i = values.length - 1; i >= 1; i--) {
+        const currentCellValue = String(values[i][0] || "").trim(); // Текст у першій комірці поточного рядка values[i]
+        const rowAboveCellValue = String(values[i - 1][0] || "").trim(); // Текст у першій комірці рядка над поточним values[i-1] (кандидат на видалення)
+
+        // Перевіряємо, чи поточний рядок (values[i]) є тригером
+        if (currentCellValue === triggerText) {
+            // Поточний рядок є тригером. Рядок-кандидат на видалення - values[i-1].
+            // Нова умова: перевіряємо рядок values[i-2] (за один до кандидата на видалення).
+
+            let shouldDeleteRowAbove = true; // Припускаємо, що будемо видаляти
+            let reasonForNotDeleting = "";
+
+            // Перевіряємо, чи існує рядок values[i-2] (тобто i >= 2)
+            if (i >= 2) {
+                const rowTwoRowsAboveCellValue = String(values[i - 2][0] || "").trim();
+                if (rowTwoRowsAboveCellValue === stopMarkerText) {
+                    // Знайдено stopMarkerText за один рядок до рядка-кандидата на видалення. Не видаляємо.
+                    shouldDeleteRowAbove = false;
+                    reasonForNotDeleting = "Зупинка за умовою: Рядок '" + rowAboveCellValue +
+                        "' (на аркуші рядок " + i + ") не видалено, оскільки рядок перед ним ('" +
+                        rowTwoRowsAboveCellValue + "' на аркуші " + (i - 1) + ") є стоп-маркером: '" + stopMarkerText + "'.";
+                }
+            }
+            // Якщо i === 1, то values[i-2] не існує, тому умова "за один рядок до" не може бути виконана.
+            // У цьому випадку shouldDeleteRowAbove залишається true (якщо немає інших умов).
+
+            if (shouldDeleteRowAbove) {
+                // Умова для не видалення не спрацювала. Видаляємо рядок values[i-1] (рядок 'i' на аркуші).
+                sheet.deleteRow(i);
+                Logger.log("Видалено рядок '" + rowAboveCellValue + "' (був на аркуші рядок " + i +
+                    ") перед рядком '" + currentCellValue + "' (який після видалення стане рядком " + i + ", а був " + (i + 1) + ").");
+                rowsDeletedCount++;
+            } else {
+                // Не видаляємо через спрацювання умови.
+                Logger.log(reasonForNotDeleting);
+                ui.alert("Попередження", reasonForNotDeleting, ui.ButtonSet.OK);
+                rowsKeptCount++;
+            }
+        }
+    }
+
+    if (rowsDeletedCount === 0 && rowsKeptCount === 0) {
+        Logger.log("Не знайдено рядків, що відповідають критеріям для видалення або збереження.");
+        SpreadsheetApp.getActiveSpreadsheet().toast("Обробка завершена. Не знайдено відповідних рядків.");
+    } else {
+        Logger.log("Обробка завершена. Видалено рядків: " + rowsDeletedCount + ". Залишено (за умовою): " + rowsKeptCount + ".");
+        SpreadsheetApp.getActiveSpreadsheet().toast("Обробка завершена. Видалено: " + rowsDeletedCount + ", Залишено: " + rowsKeptCount);
+    }
+}
 
 
 
